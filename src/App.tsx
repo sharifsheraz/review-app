@@ -1,14 +1,83 @@
 import "./App.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { solid } from "@fortawesome/fontawesome-svg-core/import.macro";
+import axios from "axios";
+import { Error } from "./error";
 
 const maxPages = 10;
+const GET_USER_API =
+  "https://ro3ll05sjd.execute-api.us-east-1.amazonaws.com/dev";
 
-function App() {
+function App(props: any) {
   const [activePageNum, setActivePageNum] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState({
+    name: "",
+    email: "",
+    navigation: [] as number[],
+  });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = getUserToken();
+      if (token) {
+        try {
+          const body = await apiCall(token);
+          setUserData({
+            name: body?.user,
+            email: body?.email,
+            navigation: body.navigation || [],
+          });
+        } catch (error) {
+          console.error({ error });
+        }
+      }
+      setLoading(false);
+    };
+    fetchUser();
+  }, []);
+
+  const updateTab = async (index: number): Promise<void> => {
+    setActivePageNum(index);
+    userData.navigation.push(index);
+    await apiCall(getUserToken(), userData.navigation);
+  };
+
+  const getUserToken = (): string =>
+    new URLSearchParams(window.location.search).get("token") || "";
 
   const isActivePage = (pageInd: number) => pageInd + 1 === activePageNum;
+  const apiCall = async (
+    token: string,
+    navigation?: number[]
+  ): Promise<Record<string, any>> => {
+    const reqBody: { token: string; navigation?: number[] } = { token };
+    if (navigation) {
+      reqBody.navigation = navigation;
+    }
+
+    const resp = await axios.post(GET_USER_API, reqBody, {
+      headers: {
+        "x-api-key": "a0wZN5SgZ15B8lP5YIgWT2OcM59bm7He5glddaQc",
+      },
+    });
+    return JSON.parse(resp.data?.body || "{}");
+  };
+
+  if (loading) {
+    return (
+      <div className="loader-container">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  console.log({ userData });
+
+  if (!userData?.name) {
+    return <Error />;
+  }
 
   return (
     <div className="App">
@@ -48,7 +117,7 @@ function App() {
                 className={
                   "clickable tab" + (isActivePage(index) ? " tab-active" : "")
                 }
-                onClick={() => setActivePageNum(index + 1)}
+                onClick={() => updateTab(index + 1)}
               >
                 {index + 1}
               </div>
@@ -78,7 +147,7 @@ function App() {
             style={{ width: 30, height: 30 }}
             onClick={() => {
               if (activePageNum < maxPages) {
-                setActivePageNum((curr) => curr + 1);
+                updateTab(activePageNum + 1);
               }
             }}
             className={
