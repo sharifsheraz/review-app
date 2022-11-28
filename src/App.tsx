@@ -1,9 +1,10 @@
 import "./App.css";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { solid } from "@fortawesome/fontawesome-svg-core/import.macro";
 import axios from "axios";
 import { Error } from "./error";
+import { ResponseBody } from "./api-response-types";
 
 const maxPages = 10;
 const GET_USER_API =
@@ -16,53 +17,67 @@ function App(props: any) {
     name: "",
     email: "",
     navigation: [] as number[],
+    iframes: [] as {
+      title: string;
+      desc: string;
+      url: string;
+    }[],
   });
 
   useEffect(() => {
     const fetchUser = async () => {
       const token = getUserToken();
+      setLoading(true);
+
       if (token) {
         try {
           const body = await apiCall(token);
           setUserData({
             name: body?.user,
             email: body?.email,
-            navigation: body.navigation || [],
+            navigation: body?.navigation || [],
+            iframes: body?.items?.map((item) => ({
+              title: item?.item[0]?.appref[0]?.name,
+              url: item?.item[0]?.appref[0]?.url,
+              desc: item.item[0]?.description,
+            })),
           });
         } catch (error) {
           console.error({ error });
         }
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchUser();
-  }, []);
+  }, [activePageNum]);
 
   const updateTab = async (index: number): Promise<void> => {
     setActivePageNum(index);
     userData.navigation.push(index);
-    await apiCall(getUserToken(), userData.navigation);
   };
 
   const getUserToken = (): string =>
     new URLSearchParams(window.location.search).get("token") || "";
 
   const isActivePage = (pageInd: number) => pageInd + 1 === activePageNum;
-  const apiCall = async (
-    token: string,
-    navigation?: number[]
-  ): Promise<Record<string, any>> => {
-    const reqBody: { token: string; navigation?: number[] } = { token };
-    if (navigation) {
-      reqBody.navigation = navigation;
-    }
+
+  const apiCall = async (token: string): Promise<ResponseBody> => {
+    const reqBody: { token: string; navigation?: number[] } = {
+      token,
+      navigation: userData.navigation,
+    };
 
     const resp = await axios.post(GET_USER_API, reqBody, {
       headers: {
         "x-api-key": "a0wZN5SgZ15B8lP5YIgWT2OcM59bm7He5glddaQc",
       },
     });
-    return JSON.parse(resp.data?.body || "{}");
+    const body = JSON.parse(resp.data?.body || "{}");
+
+    return {
+      ...body,
+      ...JSON.parse(body?.items || "[]"),
+    };
   };
 
   if (loading) {
@@ -72,8 +87,6 @@ function App(props: any) {
       </div>
     );
   }
-
-  console.log({ userData });
 
   if (!userData?.name) {
     return <Error />;
@@ -88,6 +101,7 @@ function App(props: any) {
           style={{ width: 30, height: 30 }}
           className="clickable"
         />
+        <p className="welcome-msg">Welcome, {userData.name}!</p>
         <div>
           <FontAwesomeIcon
             icon={solid("comments")}
@@ -124,7 +138,9 @@ function App(props: any) {
             ))}
         </div>
         <div className="body">
-          <div className="body-content"></div>
+          <div className="body-content">
+            <Iframe {...userData.iframes[activePageNum - 1]} />
+          </div>
         </div>
       </div>
 
@@ -161,3 +177,19 @@ function App(props: any) {
 }
 
 export default App;
+function Iframe({ url, title }: { url: string; title: string }) {
+  const iframe = `
+    <iframe
+        height="100%"
+        width="100%"
+        title=${title}
+        src=${url}
+    />
+  `;
+  return (
+    <div
+      style={{ width: "100%", height: "100%" }}
+      dangerouslySetInnerHTML={{ __html: iframe }}
+    ></div>
+  );
+}
