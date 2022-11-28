@@ -1,5 +1,5 @@
 import "./App.css";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { solid } from "@fortawesome/fontawesome-svg-core/import.macro";
 import axios from "axios";
@@ -45,8 +45,8 @@ function App(props: any) {
         } catch (error) {
           console.error({ error });
         }
-        setLoading(false);
       }
+      setLoading(false);
     };
     fetchUser();
   }, [activePageNum]);
