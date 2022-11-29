@@ -51,6 +51,10 @@
   width: 74px;
   height: 34px;
 }
+
+.tab-visited {
+  background: grey;
+}
 .body {
   padding: 20px;
   flex: 1;

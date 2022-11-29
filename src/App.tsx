@@ -16,7 +16,7 @@ function App(props: any) {
   const [userData, setUserData] = useState({
     name: "",
     email: "",
-    navigation: [] as number[],
+    navigation: [1] as number[],
     iframes: [] as {
       title: string;
       desc: string;
@@ -24,36 +24,38 @@ function App(props: any) {
     }[],
   });
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const token = getUserToken();
-      setLoading(true);
+  const fetchUser = async (navigation?: number[]) => {
+    const token = getUserToken();
+    setLoading(true);
 
-      if (token) {
-        try {
-          const body = await apiCall(token);
-          setUserData({
-            name: body?.user,
-            email: body?.email,
-            navigation: body?.navigation || [],
-            iframes: body?.items?.map((item) => ({
-              title: item?.item[0]?.appref[0]?.name,
-              url: item?.item[0]?.appref[0]?.url,
-              desc: item.item[0]?.description,
-            })),
-          });
-        } catch (error) {
-          console.error({ error });
-        }
+    if (token) {
+      try {
+        const body = await apiCall(token, navigation);
+        setUserData({
+          name: body?.user,
+          email: body?.email,
+          navigation: body?.navigation || [],
+          iframes: body?.items?.map((item) => ({
+            title: item?.item[0]?.appref[0]?.name,
+            url: item?.item[0]?.appref[0]?.url,
+            desc: item.item[0]?.description,
+          })),
+        });
+      } catch (error) {
+        console.error({ error });
       }
-      setLoading(false);
-    };
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchUser();
-  }, [activePageNum]);
+  }, []);
 
   const updateTab = async (index: number): Promise<void> => {
     setActivePageNum(index);
     userData.navigation.push(index);
+    await fetchUser(userData.navigation);
   };
 
   const getUserToken = (): string =>
@@ -61,11 +63,16 @@ function App(props: any) {
 
   const isActivePage = (pageInd: number) => pageInd + 1 === activePageNum;
 
-  const apiCall = async (token: string): Promise<ResponseBody> => {
+  const apiCall = async (
+    token: string,
+    navigation?: number[]
+  ): Promise<ResponseBody> => {
     const reqBody: { token: string; navigation?: number[] } = {
       token,
-      navigation: userData.navigation,
     };
+    if (navigation) {
+      reqBody.navigation = navigation;
+    }
 
     const resp = await axios.post(GET_USER_API, reqBody, {
       headers: {
@@ -91,6 +98,17 @@ function App(props: any) {
   if (!userData?.name) {
     return <Error />;
   }
+
+  const getTabClassName = (currIndex: number) => {
+    let className = "clickable tab";
+
+    if (isActivePage(currIndex)) {
+      className += "clickable tab tab-active";
+    } else if (userData.navigation.includes(currIndex + 1)) {
+      className += "clickable tab tab-visited";
+    }
+    return className;
+  };
 
   return (
     <div className="App">
@@ -128,9 +146,7 @@ function App(props: any) {
                 key={index}
                 aria-pressed="false"
                 tabIndex={0}
-                className={
-                  "clickable tab" + (isActivePage(index) ? " tab-active" : "")
-                }
+                className={getTabClassName(index)}
                 onClick={() => updateTab(index + 1)}
               >
                 {index + 1}
