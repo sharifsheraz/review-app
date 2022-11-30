@@ -8,7 +8,7 @@ import { ResponseBody } from "./api-response-types";
 
 const maxPages = 10;
 const GET_USER_API =
-  "https://ro3ll05sjd.execute-api.us-east-1.amazonaws.com/dev";
+  "https://39298qugkg.execute-api.us-east-1.amazonaws.com/dev";
 
 function App(props: any) {
   const [activePageNum, setActivePageNum] = useState(1);
